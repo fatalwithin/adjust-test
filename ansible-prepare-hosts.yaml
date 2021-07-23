@@ -1,0 +1,110 @@
+# ansible-prepare-hosts.yaml
+
+- hosts: 127.0.0.1
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+
+    - name: Install aptitude using apt
+      become: true
+      apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+    - name: Install required system packages
+      become: true
+      apt: name={{ item }} state=latest update_cache=yes
+      loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'curl', 'gnupg', 'lsb-release']
+
+    - name: Add Docker GPG apt Key
+      become: true
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Set up stable Docker Repository
+      become: true
+      ansible.builtin.shell: |
+        echo \
+        "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+        https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    - name: Update apt and install docker-ce
+      become: true
+      apt: name={{ item }} state=latest update_cache=yes
+      loop: [ 'docker-ce', 'docker-ce-cli', 'containerd.io' ]
+
+    - name: Install Docker Module for Python
+      become: true
+      pip:
+        name: docker
+
+    - name: Start docker service
+      become: true
+      service:
+        name: docker
+        state: started
+
+    - name: Start containerd service
+      become: true
+      service:
+        name: containerd
+        state: started
+
+    - name: Create docker group
+      become: true
+      ansible.builtin.group:
+        name: docker
+        state: present
+
+    - name: Add current user to docker group
+      become: true
+      ansible.builtin.shell:
+        cmd: |
+          usermod -aG docker $USER
+          newgrp docker
+
+    - name: Check Docker
+      ansible.builtin.shell: docker run hello-world
+
+    - name: create directory for minikube
+      become: true
+      file:
+        path: /usr/local/bin
+        state: directory
+
+    - name: Download minikube binary
+      become: true
+      ansible.builtin.shell:
+        cmd: curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64 && chmod +x minikube
+        chdir: /usr/local/bin
+        executable: /bin/bash
+
+    - name: Check the status of minikube.
+      command: minikube status
+      register: minikube_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: Start minikube if it's not running.
+      command: minikube start
+      when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+
+    - name: Enable ingress module for minikube
+      command: minikube addons enable ingress
+      when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+      ignore_errors: true
+
+    - name: Install helm 
+      become: true
+      ansible.builtin.shell:
+        cmd: curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+        chdir: /usr/local/bin
+        executable: /bin/bash
+
+    - name: Add base helm charts
+      ansible.builtin.shell:
+        cmd: helm repo add stable https://charts.helm.sh/stable
+        executable: /bin/bash

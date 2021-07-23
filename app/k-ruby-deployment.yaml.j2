@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ app_label }}
+spec:
+  selector:
+    app: {{ app_label }}
+  ports:
+    - protocol: TCP
+      port: {{ app_expose_port }}
+      targetPort: {{ app_target_port }}
+      nodePort: {{ app_nodeport }}
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ app_label }}
+  labels:
+    app: {{ app_label }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ app_label }}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ app_label }}
+    spec:
+      containers:
+      - name: ruby-test
+        image: {{ local_registry_clusterip }}:{{ registry_port }}/{{ app_image_name }}:{{ app_image_version }}
+        ports:
+        - containerPort: {{ app_target_port }}
+        livenessProbe:
+          exec:
+            command:
+            - curl
+            - localhost:{{ app_target_port }}/healthcheck
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        readinessProbe:
+          exec:
+            command:
+            - curl
+            - localhost:{{ app_target_port }}/healthcheck
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        startupProbe:
+          exec:
+            command:
+            - curl
+            - localhost:{{ app_target_port }}/healthcheck
+          failureThreshold: 30
+          periodSeconds: 10

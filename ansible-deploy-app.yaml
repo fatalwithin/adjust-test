@@ -1,0 +1,31 @@
+# playbook.yml
+
+- hosts: 127.0.0.1
+  connection: local
+  gather_facts: true
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+
+  - name: Store registry cluster IP for further use in deploy
+    shell: |
+      kubectl get service/private-docker-registry \
+      --namespace=kube-system -o jsonpath='{.spec.clusterIP}'
+    register: registry_clusterip
+  - debug: msg="Registry IP is {{ registry_clusterip.stdout }}"
+
+  - set_fact: local_registry_clusterip={{ registry_clusterip.stdout }}
+
+  - name: Create app namespace named {{ app_namespace }}
+    k8s:
+     api_version: v1
+     kind: Namespace
+     name: "{{ app_namespace }}"
+     state: present
+
+  - name: Create app Deployment and matching Service {{ app_label }}
+    k8s:
+     state: present
+     definition: "{{ lookup('template', './app/k-ruby-deployment.yaml.j2') }}"
+     namespace: "{{ app_namespace }}"

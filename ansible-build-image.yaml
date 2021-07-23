@@ -1,0 +1,36 @@
+# ansible-build-image.yaml
+
+- hosts: 127.0.0.1
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+  
+  tasks:
+
+    - name: Do a port-forward to expose the registry to localhost for anonymous image push
+      ansible.builtin.shell: |
+          kubectl port-forward --namespace kube-system </dev/null >/dev/null 2>&1 \
+          $(kubectl get po -n kube-system | grep private-docker-registry | \
+          awk '{print $1;}') {{ registry_expose_port }}:5000 &
+
+    - name: store registry exposed address
+      shell: echo "127.0.0.1:{{ registry_expose_port }}"
+      register: registry_local_expose
+
+    - name: export stored env var - exposed local registry
+      ansible.builtin.lineinfile:
+        path: ~/.profile
+        regexp: 'export REGISTRY_LOCAL_IP={{ registry_local_expose.stdout }}'
+        insertafter: 'EOF'
+        line: 'export REGISTRY_LOCAL_IP={{ registry_local_expose.stdout }}'
+        state: present
+
+    - name: Build an image and push it to a private registry
+      community.docker.docker_image:
+        build:
+          path: "./app"
+        name: "{{ registry_local_expose.stdout }}/{{ app_image_name }}"
+        tag: "{{ app_image_version }}"
+        push: yes
+        source: build

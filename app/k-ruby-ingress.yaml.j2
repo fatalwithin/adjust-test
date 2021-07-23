@@ -1,0 +1,10 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ app_fqdn }}
+spec:
+  defaultBackend:
+    service:
+      name: {{ app_label }}
+      port:
+        number: {{ app_expose_port }}

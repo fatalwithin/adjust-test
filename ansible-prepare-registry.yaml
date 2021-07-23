@@ -1,0 +1,56 @@
+# ansible-prepare-registry.yaml
+
+- hosts: 127.0.0.1
+  connection: local
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Install community docker module
+      ansible.builtin.shell:
+        cmd: |
+          ansible-galaxy collection install community.docker
+
+    - name: Install Kubernetes Module for Python
+      become: true
+      pip:
+        name: kubernetes
+
+    - name: Install Openshift Module for Python
+      become: true
+      pip:
+        name: openshift
+
+    - name: Install community kubernetes module
+      ansible.builtin.shell:
+        cmd: |
+          ansible-galaxy collection install community.kubernetes
+
+    - name: Install private registry inside minikube via helm
+      ansible.builtin.shell:
+        cmd: |
+          helm install private stable/docker-registry --namespace kube-system \
+          --set service.type=NodePort \
+          --set service.nodePort={{ registry_nodeport }}
+      ignore_errors: true
+
+    - name: Store registry cluster IP for further use in deploy
+      shell: |
+        kubectl get service/private-docker-registry \
+        --namespace=kube-system -o jsonpath='{.spec.clusterIP}'
+      register: registry_clusterip
+
+    - name: Export stored env var - exposed cluster IP registry
+      ansible.builtin.lineinfile:
+        path: ~/.profile
+        regexp: '^(.*)export REGISTRY_CLUSTER_IP(.)*$'
+        line: 'export REGISTRY_CLUSTER_IP={{ registry_clusterip.stdout }}'
+        backrefs: yes
+        insertafter: 'EOF'
+        state: present
+ 
+    - name: Source the profile file
+      ansible.builtin.shell:
+        cmd: source ~/.profile
+        executable: /bin/bash

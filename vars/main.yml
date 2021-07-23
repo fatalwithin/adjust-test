@@ -1,0 +1,25 @@
+---
+registry_fqdn: "registry.test"
+
+registry_port: 5000
+
+registry_nodeport: 31500
+
+registry_expose_port: 15000
+
+app_fqdn: "ruby-app.test"
+
+app_nodeport: 32000
+
+app_expose_port: 8800
+
+app_target_port: 80
+
+app_image_name: "ruby-app"
+
+app_image_version: "1.0.1"
+
+app_namespace: "develop"
+
+app_label: "ruby-app"
+
