@@ -187,6 +187,8 @@ The options you can setup there:
 
 `app_label`: Kubernetes app label that is applied on all the application resources, by default "ruby-app"
 
+`app_replicas`: Initial number of replicas in Kubernetes deployment - 3 by default. 
+
 #### Installation process
 
 1. You need a Ubuntu-based host (tested on 21.04 but I assume any actual version like 20.x or 18.x is OK )
