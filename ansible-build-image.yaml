@@ -12,17 +12,19 @@
       ansible.builtin.shell: |
           kubectl port-forward --namespace kube-system </dev/null >/dev/null 2>&1 \
           $(kubectl get po -n kube-system | grep private-docker-registry | \
-          awk '{print $1;}') {{ registry_expose_port }}:5000 &
+          awk '{print $1;}') {{ registry_expose_port }}:{{ registry_port }} &
 
     - name: store registry exposed address
       shell: echo "127.0.0.1:{{ registry_expose_port }}"
       register: registry_local_expose
 
+    # we store it as an ENV var just in case of further use
     - name: export stored env var - exposed local registry
       ansible.builtin.lineinfile:
         path: ~/.profile
-        regexp: 'export REGISTRY_LOCAL_IP={{ registry_local_expose.stdout }}'
+        regexp: '^(.*)export REGISTRY_LOCAL_IP=(.)*$'
         insertafter: 'EOF'
+        backrefs: yes
         line: 'export REGISTRY_LOCAL_IP={{ registry_local_expose.stdout }}'
         state: present
 

@@ -35,22 +35,10 @@
           --set service.nodePort={{ registry_nodeport }}
       ignore_errors: true
 
-    - name: Store registry cluster IP for further use in deploy
+    # we really do not need this variable here
+    - name: Store registry ClusterIP for further use in deploy
       shell: |
         kubectl get service/private-docker-registry \
         --namespace=kube-system -o jsonpath='{.spec.clusterIP}'
       register: registry_clusterip
 
-    - name: Export stored env var - exposed cluster IP registry
-      ansible.builtin.lineinfile:
-        path: ~/.profile
-        regexp: '^(.*)export REGISTRY_CLUSTER_IP(.)*$'
-        line: 'export REGISTRY_CLUSTER_IP={{ registry_clusterip.stdout }}'
-        backrefs: yes
-        insertafter: 'EOF'
-        state: present
- 
-    - name: Source the profile file
-      ansible.builtin.shell:
-        cmd: source ~/.profile
-        executable: /bin/bash

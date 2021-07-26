@@ -15,6 +15,23 @@
     register: registry_clusterip
   - debug: msg="Registry IP is {{ registry_clusterip.stdout }}"
 
+  # we store it as an ENV var just in case of further use
+  - name: Export stored env var - exposed cluster IP registry
+    ansible.builtin.lineinfile:
+      path: ~/.profile
+      regexp: '^(.*)export REGISTRY_CLUSTER_IP(.)*$'
+      line: 'export REGISTRY_CLUSTER_IP={{ registry_clusterip.stdout }}'
+      backrefs: yes
+      insertafter: 'EOF'
+      state: present
+
+  # we export the .profile file to get access to new ENVs after 
+  # returning back to bash. Not used in playbook really.
+  - name: Source the profile file
+    ansible.builtin.shell:
+      cmd: source ~/.profile
+      executable: /bin/bash
+
   - set_fact: local_registry_clusterip={{ registry_clusterip.stdout }}
 
   - name: Create app namespace named {{ app_namespace }}
