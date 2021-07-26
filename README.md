@@ -58,7 +58,7 @@ Next, following the numbers on the scheme:
 
 1) Setup our infrastructure with Ansible: install all necessary packages, install Docker and minikube along with our private image registry.
 
-2) Setup our local and remote git repo (assuming all code and manifests and other artifacts are written, tested and ready to deploy).
+2) Setup our local and remote git repo (assuming all code and manifests and other artifacts are written, tested and ready to deploy). Setup Helm for further deploying and updating system software via Helm charts in the Kubernetes cluster (and maybe our app too if I could and have time to package it into Helm chart)
 
 3) Setup the automatic image building tool (Jenkins for example) that ideally should integrate via webhook with our remote git repo and rebuild our image with autoincrementing its version on new commits.
 
@@ -68,7 +68,7 @@ Next, following the numbers on the scheme:
 
 6) Deploy/redeploy our app to Kubernetes cluster (ok not cluster but single-node-everything on minikube)
 
-7) Publish our app for external users with access via Kubernetes ingress (ideally with HTTPS access and self-signed certificate that could be easily changed to Letsencrypt or something similar in normal Kubernetes cluster)
+7) Publish our app for external users with access via the Kubernetes ingress (ideally with HTTPS access and self-signed certificate that could be easily changed to Letsencrypt or something similar in normal Kubernetes cluster)
 
 
 
@@ -305,14 +305,14 @@ The options you can setup there:
 ### Possible improvements
 
  - 2 git branches at least - main/develop - currently only 1 main branch
- - proper and working Ansible roles, Linux distro-agnostic
+ - proper and working Ansible roles, to make code cleaner and make the solution Linux distro-agnostic
   - separate namespaces for dev/prod env in k8s
-  - set limits and requests for prod
-  - set QoS class: Guaranteed for prod
+  - set limits and requests for pods in Kubernetes (actual for prod environment)
+  - set QoS class: Guaranteed for pods in Kubernetes (actual for prod environment)
 
-  - canary/a-b testing deployment strategies instead of default rollout stategy
-  - better templating/maybe with Helm charts
-  - proper automatic build/deploy
-  - vaulted credentials if needed (currently only anonymous access everywhere)
+  - canary/a-b testing deployment strategies instead of default rollout one-by-one pod replacing stategy
+  - better templating/maybe with packaging the app into Helm charts
+  - proper automatic (really automatic by one button hit) build/deploy
+  - vaulted credentials and other sensitive data if needed (currently only anonymous access everywhere for dev and test purposes)
   - external highly available docker registry
-  - external hightly available persistent data storage (S3, DB etc)
+  - external hightly available persistent data storage (S3, DB etc) if needed (currently no need for persistent data)
